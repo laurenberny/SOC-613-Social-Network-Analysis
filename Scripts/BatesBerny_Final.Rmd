@@ -1,0 +1,376 @@
+---
+title: 'Fish of the sea, come to me: A social network analysis of Shark Tank business partnerships'
+author: "Elizabeth Bates & Lauren Berny"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    df_print: paged
+    theme: spacelab
+    highlight: kate
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(rio)
+library(tidyverse)
+library(igraph)
+library(psych)
+library(kableExtra)
+library(gtsummary)
+library(colourvalues)
+library(RColorBrewer)
+
+dat <- import(here("Data", "Shark Tank Dataset.xlsx"))
+
+dat <- dat %>% 
+ arrange(`Pitch Number`)
+```
+
+# Introduction
+
+Network theory/social network analysis (SNA) is an innovative approach to both graphically and statistically examine relationships as well as explain social phenomena.^[Borgatti, S. P., Mehra, A., Brass, D.J., & Labianca, G., (2009). Network analysis in social sciences. *Science, 323*, 892-895. https://doi.org/10.1126/science.1165821] Applications of SNA in the business space include investigation into complex social and corporate dynamics with potential for answering questions about factors that may influence the emergence of formal and informal networks, such as partnerships, strategic alliances, and mergers and acquisitions.^[Cross, R., Borgatti, S. P., & Parker, A. (2002). Making invisible work visible: Using social network analysis to support strategic collaboration. *California Management Review, 44*(2), 25-46. https://doi.org/10.2307/41166121] One common application of SNA in business research has been examining how centrality among actors within a network affects outcomes such as performance and strategic behavior.^[Ahuja, M. K., Galletta, D. F., & Carley, K. M. (2003). Individual centrality and performance in virtual R&D groups: An empirical study. *Management Science, 49*(1), 21-38. https://doi.org/10.1287/mnsc.49.1.21.12756; Kelly, L. M., Athanassiou, N., & Crittenden, W. F. (2000). Founder centrality and strategic behavior in the family-owned firm. *Entrepreneurship Theory and Practice, 25*(2), 27-42. https://www.doi.org/10.1177/104225870002500202] Nonetheless, as a whole, SNA is an underutilized analytic tool in business research despite many research questions related to business partnerships being rooted in concepts from social network theory. For example, Hegde and Tumlinson (2014)^[Hegde, D., & Tumlinson, J. (2014). Does social proximity enhance business partnerships? Theory and evidence from ethnicity's role in US venture capital. *Management Science, 60*(9), 2355-2380.  https://doi.org/10.1287/mnsc.2013.1878] used traditional inferential modeling techniques to examine the roles of social proximity and ethnic homophily in the formation of business partnerships, finding that ethnic homophily between venture capital firms and companies they invest in positively affects performance, and that influence (as measured by constructs/estimates of communication and coordination) drives the positive performance. Another study^[Bengtsson, O., & Hsu, D. H. (2010). How do venture capital partners match with startup founders? *Social Science Research Network*, 1568131. http://dx.doi.org/10.2139/ssrn.1568131] applied matching techniques found that individuals were more likely to invest in a startup if they shared a common ethnicity or both attended a top-ranked university, but complementary of expertise was not a strong matching factor; rather, professional expertise was associated with the lifecycle phase of the startup.
+
+Although these studies provide evidence to the body of literature on the application of network theory to business partnerships, their methods are limited by the nuances they can detect in the networks themselves. As such, the current study analyzes business partnerships by applying SNA to case studies presented on the reality television show *Shark Tank*.  SNA allows us to investigate network principles such as centrality, influence and patterns of partnerships.  We can analyze attributes of partnerships and partners themselves (i.e. Sharks and businesses),  explore how they interface, and how specific relationships may affect business successes (e.g. the effect of increased equity and influence).^[Light, R. & Moody, J. (2020). Network basics: Points, lines, and positions. In R. Light & J. Moody (Eds.), *The Oxford Handbook of Social Networks* (pp. 17-33). Oxford University Press.] 
+
+
+## *Shark Tank*
+
+The reality television show, *Shark Tank*, creates a fortuitous setting that allows us to study a high volume of business deals between investors, business owners, and partnerships between investors. The show features business owners pitching their ideas to a panel of successful entrepreneurs, known as the "Sharks." Although each episode's panel is made up of five Sharks (with two alternating), there have been six main Sharks since season three: Barbara Corcoran, Mark Cuban, Lori Greiner, Robert Herjavec, Daymond John, and Kevin O'Leary. The business owners present their concepts, products, or services in hopes of securing investment deals from one or more of the Sharks. In a limited amount of time, they must convince the Sharks why their idea is worth investing. Following the pitch, the Sharks have the opportunity to ask questions, make critiques, offer feedback, and negotiate investment terms. If a pitch interests multiple Sharks, they can outbid one another to close the deal or team up together to offer a joint deal with at least one other Shark. Thus, although the Sharks have the most power in the tank, at times, the business owners also exercise their own power and control by choosing to reject a deal or offers.^[CNBC. (2023). *Shark Tank*. https://www.cnbc.com/shark-tank/] As such, the episodes of this series provide a diverse sample of case studies to examine the influential factors in the formation of investment relationships and partnerships. 
+
+To the best of our knowledge, there is only one study that used SNA to examine the business relationships in the case studies featured on *Shark Tank*. Using data collected from seasons one through six, Beckman and Shahrasbi (2020)^[Beckman, P., & Shahrasbi, N., (2020). Behind the scenes: Applying social network analysis to unfold entrepreneurs’ investment decisions. *International Journal of Entrepreneurship and Small Business, 39*(1/2), 325-327.  https://doi.org/10.1504/IJESB.2020.104259] modeled a one-mode network to examine individual and joint investments among the Sharks. They found that Mark had approximately equal numbers of joint investments with the other Sharks, whereas all the other Sharks had more or fewer frequent partnerships. For example, Daymond invested jointly with all the other Sharks at approximately the same level except for Lori, with whom he rarely jointly invests. In contrast, Lori was much more likely to invest with Mark and less likely to invest with the other Sharks. Barbara more commonly invested with Daymond and Mark, whereas Robert invested more with Daymond, Mark, and Kevin In particular, Robert was more likely to invest with Kevin than the other Sharks. Although one can make inferences about the importance of Sharks from these findings, the researchers did not formally examine centrality in the network nor factors that may make these joint investment partnerships more common. More notably, only relationships between Sharks were examined rather than relationships between the Sharks and business owners. 
+
+## Current Study
+
+We extend this research by using thirteen seasons of *Shark Tank* data to graph a bimodal network consisting of the six main Sharks and the business owners who successfully pitched in the tank. Using centrality calculations and an exponential random graph model, we aimed to answer the two following research questions: (**RQ1**) Which nodes are central in this network?; and (**RQ2**) Is an edge more or less likely to be established with certain business industries and for Sharks and business owners of the same sex?
+
+# Methods
+
+## Data Source
+
+The data analyzed for this study are from a pubic dataset that contains information from every *Shark Tank* episode through the current season.^[Thirumani, S. (2023). *Shark Tank* U.S. dataset. https://www.kaggle.com/datasets/thirumani/shark-tank-us-dataset] Data were at the "pitch-level" (i.e., a row for each business pitched to the Sharks), with variables related to episode data (e.g., season, viewers), business and business owner characteristics (e.g., industry, sex), pitch information (e.g., valuation and equity proposed), and the result (e.g., outcome of the pitch, Shark investment information if deal was reached). Information about the result of this pitch was used as Shark-level data.
+
+## Analytic Sample
+
+Our analytic sample consisted of two modes: the main Sharks (*n* = 6) and businesses (*n* = 717). For simplicity, we chose to only focus on the six main Sharks; therefore, we did not include guest Sharks as nodes. To handle isolates, we excluded 509 businesses that did not receive a deal and 49 businesses that only received a deal from a guest Shark.
+
+## Measures
+
+To answer our research questions, we incorporated the following variables into our analysis:
+
+-   **Industry**: A variable denoting the businesses' industries ("industry" in dataset), which consisted of 15 levels.
+
+-   **Sex**: We created a combined sex variable in the dataset for both businesses and Sharks. For the businesses, we used information from the "pitcher gender" variable, which coded businesses by the sex of their respective pitcher(s). There was a small number of businesses with missing data for this variable, which we addressed by coding these cases ourselves by viewing those pitches. For Sharks, we coded their sex based on how the Sharks present and refer to themselves. Taken together, this resulted in a three-level variable: (1) male, (2) female, and (3) mixed team.
+
+-   **Shark equity and investment**: Shark equity and investment data given for each Shark at the business-level were used to create a binary variable for each of the six Sharks to reflect whether they participated in the deal (1) or did not participate in the deal (0).
+
+## Social Network Analysis
+
+Because we were interested in how two different modes of actors (businesses and Sharks) are linked, we graphed this as a bipartite network.^[Mützel, S., & Breiger, R. (2020). Duality beyond persons and groups. In R. Light & J. Moody (Eds.), *The Oxford Handbook of Social Networks* (pp. 392-413). Oxford University Press.] First, a business by Shark incidence matrix was created with the 717 businesses as rows, six Sharks as columns, and the binary deal indicator as cell values. We used the matrix to graph a bipartite social network in the R package igraph.^[Csardi, G., & Nepusz, T. (2006). The igraph software package for complex network research. *InterJournal*, Complex Systems, 1695, 1-9.] Next, we added industry and sex as vertex attributes and Shark equity as edge attributes then subsequently plotted our network using the KK algorithm. The nodes were colored by industry and sex for the vertex attributes, and the edge size was adjusted to reflect the business equity associated with the tie.
+
+We began our analysis by calculating descriptive statistics to describe our sample. For our first research question, we calculated total degrees, betweenness centrality, closeness centrality, and eigenvector centrality for the modes in the bipartite network. To answer our second research question, we estimated an exponential random graph model (ERGM) in statnet^[Handcock, M. S., Hunter, D. R., Butts, C. T., Goodreau, S. M., & Morris, M. (2008). Statnet: Software tools for the representation, visualization, analysis and simulation of network data. *Journal of Statistical Software, 24*(1), 1-11.] with edges regressed onto sex match, Shark-level ties, and industry as a business-level factor. The ERGM approach can disentangle endogenous and exogenous variables that affect ties between nodes (i.e. partnerships between Sharks and businesses), which allows for deciphering the complex and nuanced attributes of business partnerships. As such, we included Shark-level ties (with Daymond chosen as the omitted reference node) as an endogenous covariate. Because this model has no dyadic dependencies, maximum likelihood was used to estimate the model.
+
+```{r matrix, warning=FALSE, message=FALSE, echo=FALSE}
+df <- dat %>% 
+ filter(`Got Deal`==1) %>% 
+ filter(`Guest Deal Only` == 0) %>% 
+ select(name, Barbara, Mark, Lori, Robert, Daymond, Kevin)
+
+# Extract row names and column names
+row_names <- df[, 1]
+col_names <- names(df)[-1]
+
+# Convert dataframe to matrix
+mat <- as.matrix(df[, -1])
+
+# Set row names and column names for the matrix
+rownames(mat) <- row_names
+colnames(mat) <- col_names
+
+bipartite <- graph_from_incidence_matrix(mat)
+```
+
+```{r vertices, warning=FALSE, message=FALSE, echo=FALSE}
+df1 <- igraph::as_data_frame(bipartite, 'vertices')
+
+df2 <- dat %>% 
+ filter(`Got Deal`==1) %>% 
+ filter(`Guest Deal Only`== 0) %>% 
+ select(name, `Season Number`, Industry, `Pitchers Gender`, `Deal Valuation`)
+
+joined_df <- full_join(df1, df2, by = "name")
+
+season <- joined_df$`Season Number`
+industry <- joined_df$Industry
+sex <- c(joined_df$`Pitchers Gender`)
+sex <- sex[!is.na(sex)]
+sex <- c(sex, "Female", "Male", "Female", "Male", "Male", "Male")
+valuation <- joined_df$`Deal Valuation`
+
+V(bipartite)$season <- season
+V(bipartite)$sex <- sex
+V(bipartite)$industry <- industry
+V(bipartite)$valuation <- valuation
+```
+
+```{r edges, warning=FALSE, message=FALSE, echo=FALSE}
+df1 <- igraph::as_data_frame(bipartite, 'edges') #edges as DF1
+
+df2 <- dat %>% 
+ filter(`Got Deal`==1) %>% 
+ filter(`Guest Deal Only` == 0)
+
+# Add investment amount and equity amounts from df2 to df1
+df1$InvestmentAmount <- sapply(1:nrow(df1), function(i) {
+  company <- df1$from[i]
+  investor <- df1$to[i]
+  investment_col <- paste0(investor, "Investment")
+  
+  df2[df2$name == company, investment_col]
+})
+
+df1$EquityAmount <- sapply(1:nrow(df1), function(i) {
+  company <- df1$from[i]
+  investor <- df1$to[i]
+  equity_col <- paste0(investor, "Equity")
+  
+  df2[df2$name == company, equity_col]
+})
+
+equity <- df1$EquityAmount
+investment <- df1$InvestmentAmount
+
+E(bipartite)$equity <- round(equity,1)
+E(bipartite)$investment <- investment
+```
+
+# Results
+
+As shown in the table below, the most common industries represented were food and beverage and lifestyle/home, each with 147 (20.5%) businesses. Fashion/Beauty was the third most common industry with 117 (16.3%) businesses. Over half of the businesses were pitched by males (53.6%), followed by females (27.3%) and mixed teams (19.1%). Although a few businesses received investments by all of the main Sharks present on a given episode (*n* = 5), 97.2% of businesses received an investment from one (79.2%) or two (18%) Sharks.
+
+```{r businesses, warning=FALSE, message=FALSE, echo=FALSE}
+dat %>% 
+ filter(`Got Deal`==1) %>% 
+ filter(`Guest Deal Only` == 0) %>% 
+ select(Industry, `Pitchers Gender`, `Number of sharks in deal`) %>% 
+  tbl_summary(missing = "no",
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_categorical() ~ c(0, 1),
+                  all_continuous() ~ 2),
+    label = `Pitchers Gender` ~ "Sex") %>% 
+  bold_labels() %>% 
+ italicize_levels() %>% 
+ modify_header(all_stat_cols() ~ "*n* = {n}")
+```
+
+Among the Sharks, Daymond reached deals with the highest averaged equity (25.8%); whereas Kevin reached deals with the lowest average equity (15.1%), which is not surprising given his penchant for loan and royalty deals. The Sharks are a male-dominated group, with two-thirds identifying as male.
+
+```{r sharks, warning=FALSE, message=FALSE, echo=FALSE}
+dat2 <- dat %>% 
+ filter(`Got Deal`==1) %>% 
+ filter(`Guest Deal Only` == 0)
+
+new_column_labels <- c("Male", "Male", "Male", "Male", "Female", "Female")
+
+# Create a new column vector with NA values
+new_column <- rep(NA, length.out = nrow(dat2))
+
+# Assign the vector labels to the corresponding rows in the new column
+new_column[1:length(new_column_labels)] <- new_column_labels
+
+new_column <- rep(new_column, length.out = nrow(dat2))
+dat2$sex <- new_column
+
+dat2 %>% 
+ select(BarbaraEquity, MarkEquity, LoriEquity, RobertEquity, DaymondEquity, 
+        KevinEquity, sex) %>% 
+  tbl_summary(missing = "no",
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_categorical() ~ c(0, 1),
+                  all_continuous() ~ 1),
+    label = list(`sex` ~ "Sex",
+    `BarbaraEquity` ~ "Barbara Equity",
+    `MarkEquity` ~ "Mark Equity",
+    `LoriEquity` ~ "Lori Equity",
+    `RobertEquity` ~ "Robert Equity",
+    `DaymondEquity` ~ "Daymond Equity",
+    `KevinEquity` ~ "Kevin Equity")) %>% 
+ bold_labels() %>% 
+ italicize_levels() %>% 
+ modify_header(all_stat_cols() ~ "*n* = 6")
+```
+
+
+The social network colored by industry is pictured below.
+```{r prep, warning=FALSE, message=FALSE, echo=FALSE}
+mytriangle <- function(coords, v=NULL, params) {
+    vertex.color <- params("vertex", "color")
+    if (length(vertex.color) != 1 && !is.null(v)) {
+        vertex.color <- vertex.color[v]
+    }
+    vertex.size <- 1/200 * params("vertex", "size")
+    if (length(vertex.size) != 1 && !is.null(v)) {
+        vertex.size <- vertex.size[v]
+    }
+    
+    graphics::symbols(
+        x = coords[, 1], y = coords[, 2], bg = vertex.color,
+        stars = cbind(vertex.size, vertex.size, vertex.size),
+        add = TRUE, inches = FALSE)
+}
+    add.vertex.shape(
+        "triangle", clip = vertex.shapes("circle")$clip, plot = mytriangle)
+
+V(bipartite)$shape <- ifelse(V(bipartite)$type,  "triangle", "circle")
+
+E(bipartite)$color <- "lightgray"
+
+V(bipartite)$label.color <- "black"
+
+V(bipartite)$frame.color <- "lightgray"
+ 
+V(bipartite)$label.cex <- ifelse(V(bipartite)$type, 0.8, 0.1) #text size, first value is shark, second value is business
+
+V(bipartite)$size <- ifelse(V(bipartite)$type, 15, 3) #node size, default is 15
+
+n <- 16
+m <- grDevices::colorRamp(c("aquamarine", "deeppink", "chartreuse", "cornflowerblue",
+                            "darkgreen", "lightcyan", "royalblue2", "deeppink",
+                            "salmon", "hotpink", "yellow", "tomato", "firebrick3",
+                            "lightseagreen", "seagreen3", "darkorchid3"))( (1:n)/n )
+scale <- data.frame(a = 10, x = 1:n)
+colors <- colour_values(industry, palette = m)
+legendcol <- unique(colors)
+```
+
+```{r graph1, fig.align='center', echo=FALSE, fig.height=9.5, fig.width=9}
+plot(bipartite, 
+     vertex.color=adjustcolor(colors, alpha=.7),
+     edge.width=equity/12.5,
+     layout=layout_with_kk)
+legend("bottom", horiz = F,
+       legend = c("Health/Wellness", "Food and Beverage", "Children/Education",
+                  "Software/Tech", "Fitness/Sports/Outdoors", "Fashion/Beauty",
+                  "Pet Products", "Lifestyle/Home", "Travel", "Automotive",
+                  "Uncertain/Other", "Electronics", "Media/Entertainment",
+                  "Liquor/Alcohol", "Business Services", "Green/CleanTech"),
+       bg=NULL, cex = 0.5, ncol=5,
+       fill=legendcol)
+```
+
+## Research Question 1
+
+For the Sharks, degree count indicates the number of deals reached. As shown in the table below, Mark has closed the most deals (230), followed by Lori (199), Robert (121), Barbara (120), Kevin (117), and Daymond (111). Overall this appears to be a close network: Although Mark and Lori have the highest closeness centrality (0.00059 and 0.00057, respectively), their scores are not much higher than the other Sharks' scores, whose closeness centrality scores range between 0.00052 and 0.00053. Mark (114341.40) and Lori (95248.86) have the highest betweeness scores, which indicates that they are influential in the flow of communication within the network. 
+
+Mark's eigenvector centrality score of 1.0 suggests that he is the most influential Shark. Although he has the most degrees, his high eigenvector scores suggests that the businesses he is connected to are also influential based on their eigenvector centrality scores. Lori's eigenvector centrality is the second highest (0.71), much higher than that of the next Shark (Robert with 0.24), indicating she is also a very influential Shark in the tank. Interestingly, Kevin has higher eigenvector centrality than Barbara and Daymond, which is likely influenced by having more multi-Shark deals with Mark and Lori. Although Barbara's betweeness score (61157.96) is higher than that of Robert (59312.94), Kevin (57081.82), and Daymond (58613.02), in the context of her eigenvector centrality, it could indicate she has more control over communication flow with less influential nodes.
+
+```{r sharkcentrality, warning=FALSE, message=FALSE, echo=FALSE}
+types <- V(bipartite)$type                 
+deg <- degree(bipartite) 
+bet <- betweenness(bipartite)
+clos <- closeness(bipartite)
+eig <- eigen_centrality(bipartite)$vector
+
+cent_df <- data.frame(types, deg, bet, clos, eig)
+
+cent_df %>%
+ filter(types == "TRUE") %>% 
+ select(-types) %>% 
+ arrange(desc(deg)) %>% 
+ kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+In the business mode, Breathometer, XCraft, Eyewris, Classroom Jams, and Buggy Bed have a degree of five, meaning that the maximum number of main Sharks in the tank on each episode bought into these deals. However, Classroom Jams and Buggy Bed have lower eigenvector centrality scores than the other three, which could be influenced by Lori not being present during these episodes and thus not involved in the deals.
+
+```{r businesscentrality, warning=FALSE, message=FALSE, echo=FALSE}
+cent_df %>% 
+ filter(types == "FALSE") %>%
+ select(-types) %>% 
+ arrange(desc(deg))
+```
+
+
+## Research Question 2
+
+The social network colored by sex is pictured below.
+```{r graph2, fig.align='center', echo=FALSE, fig.height=9.5, fig.width=9}
+colors2 <- colour_values(sex, palette = "viridis")
+legendcol2 <- unique(colors2)
+
+plot(bipartite, 
+     vertex.color=adjustcolor(colors2, alpha=.55),
+     edge.width=equity/12.5,
+     layout=layout_with_kk)
+legend("bottom", horiz = T,
+       legend=c("Female","Male", "Mixed Team"),
+       bg=NULL, cex = 0.8,
+       fill=legendcol2)
+```
+
+The results of the ERGM model estimated to answer the second research question are displayed in the table below. Sharks and business owners identifying as the same sex increases the probability of a tie by 58%, which is statistically significant (*p* <.001). However, none of the industry types have significantly higher or lower probabilities of establishing a tie. Additionally, the endogenous covariates entered into the model also suggest that Mark and Lori are integral to the formation of ties in the network (*p* <.001).
+
+```{r ergm, warning=FALSE, message=FALSE, echo=FALSE}
+library(statnet)
+
+snet <- network(
+  mat,
+  directed = FALSE,
+  bipartite = TRUE)
+
+set.vertex.attribute(snet, "season", season)
+set.vertex.attribute(snet, "industry", industry)
+set.vertex.attribute(snet, "sex", sex)
+set.vertex.attribute(snet, "valuation", valuation)
+
+set.edge.attribute(snet, "equity", equity)
+set.edge.attribute(snet, "investment", investment)
+
+ergm <- as.data.frame(coefficients(summary(ergm(snet ~ edges +
+                                                  nodematch("sex") + 
+                                                  b2sociality(nodes=-6) +
+                                                  b1factor("industry")))))
+
+rownames(ergm) <- NULL
+
+ergm$Variables <- c("Edges", "Node Match - Sex", "Barbara Ties", "Mark Ties", "Lori Ties",
+                     "Robert Ties", "Kevin Ties", "Business Services", "Children/Education",
+                     "Electronics", "Fashion/Beauty", "Fitness/Sports/Outdoors", 
+                     "Food and Beverage", "Green/CleanTech", "Health/Wellness",
+                     "Lifestyle/Home", "Liquor/Alcohol", "Media/Entertainment", 
+                     "Pet Products", "Software/Tech", "Travel", "Uncertain/Other")
+
+#round(plogis(0.304),2)
+
+ergm %>% 
+ relocate(Variables) %>% 
+ kable(digits=3) %>% 
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+Based on the plots below, the model fit has room to improve; as such, more work should be conducted to better refine it. Because this model was estimated with maximum likelihood due to the lack of dyadic dependencies, there is no need to present MCMC convergence plots.
+
+```{r gof, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE}
+ergm2 <- ergm(snet ~ edges + nodematch("sex") + b2sociality(nodes=-6) + b1factor("industry"))
+
+ergm2.gof <- gof(ergm2)
+plot(ergm2.gof)
+```
+
+
+# Discussion
+
+This study sought to examine the network structure of Sharks and business owners on *Shark Tank* as well as examine whether industry type and sex homophily was associated with the likelihood of establishing a partnership between a Shark and business. We found that Mark was the most influential Shark, serving as a key player in closing business deals (singularly and in partnerships with others Sharks) on the show. Moreover, his influence is magnified by the influences of the businesses he partners with, that have high eigenvector centrality scores. This pattern raises the question of direction of influence: are the businesses successful because of him and his influence, or do the businesses increase his influence within both networks? Additionally, we found that Lori was consistently the second more influential Shark; given that Lori and Mark have the largest number of investment partnerships among Sharks in the network, it stands to hypothesize that they likely benefit from one another’s high influence and centrality. Moreover, results from the ERGM model indicate that gender homophily but not industry type was associated with the increased probability of establishing ties between Sharks and business owners. In other words, Sharks were significantly more likely to invest in businesses that were owned by people who identified as the same sex as themselves. Interestingly, visual inspection of the model indicates that Barbara and Lori, the only two Sharks identifying as female, have only one tie between the two of them, and that partnership is with a female-run business. Their only other partnership is a joint deal with the other male Sharks and with a male business owner. This raises the question of whether investment partnerships are a product of gender dynamics (and the root of those gender dynamics in business) or confounded by other business-related factors such as expertise and familiarity with certain industries. Thus, more research exploring gender dynamics in this network is warranted. Additionally, the number of ties for Mark and Lori were also statistically significant in the model, reinforcing their importance in this network.
+
+This bimodal analysis of the *Shark Tank* network is only the beginning. There are multiple other analyses we hope to run and patterns in relationships we want to decode. In addition to the future analyses as extensions of this study’s work described above, we are also interested in incorporating guest Sharks who appeared on the show (e.g., Alex Rodriguez and Bethany Frankel), which will allow for greater diversity. Another intriguing project would be writing a tutorial paper analyzing this dataset using the ‘bipartite’ R package, which was initially designed for ecological webs and analysis yet is waiting to be applied to applications in social sciences.^[Dormann, C.F., Fruend, J., Gruber, B., Devoto, M., Felix, G.M.F., Iriondol, J., Opsah, T., Pinheiro, R.B.P., Strauss, R., & Velzquez, D.P.V., (2022). *Visualising bipartite networks and calculating some (ecological) indices.* Package ‘bipartite’. https://cran.r-project.org/web/packages/bipartite/bipartite.pdf] Moreover, another direction is applying SNA to investment questions previously analyzed through traditional statistical methods. For example, we can assign appropriate risk and uncertainty scores to businesses^[Kaplan, S. N., & Strömberg, P. E. (2004). Characteristics, contracts, and actions: Evidence from venture capitalist analyses. *The Journal of Finance, 59*(5), 2177-2210.] and use SNA to explore how perceived risk and uncertainty affects partnerships. We are also curious to see if physical proximity during the show (i.e., which Sharks routinely sit by one another) could influence the likelihood of investment partnerships. 
+
+Despite the novelty of this study, the results must be viewed in light of its limitations. First, there were a large number of industry types that may complicate the fit of the ERGM model, particularly when there are few cases in certain levels (e.g., travel and green/clean-tech). Second, we are relying on the accuracy of secondary data despite there being no information on the processes or inter-rater reliability for certain subjective codes, such as industry type. Thus, for future analyses, it would be beneficial to collapse some of these industry types and check the reliability of the industry coding. Third, the Shark portion of the network is rather homogeneous, with only two females and a nearly all white cast, which can complicate analyzing homophily. For instance, it is possible our finding of sex homophily is driven by the Sharks being majority male and more than half of businesses being male-owned. Nonetheless, we hope to address this limitation by incorporating the guest Sharks for more diversity in the tank.
+
+In conclusion, *Shark Tank* provides a rich dataset to analyze with SNA and examine a diverse array of constructs within the business field. The structure of the dataset itself is an example of how to collect data that can be used for SNA. The techniques employed in this study can subsequently be modeled in other disciplines and contribute to further advancing our understanding of how information, influence, behaviors, and other social phenomena move through networks.  
